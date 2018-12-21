@@ -1,0 +1,46 @@
+@startuml
+title lacp keepalive
+
+hide footbox 
+
+box "C600"
+participant "LACP Task" as lacp 
+participant "keep alive\n 高优先级任务" as keep  #pink
+end box
+
+participant "对端设备" as partner
+
+
+lacp -> partner : 发送报文
+lacp ->keep : 通知保活模块
+keep -> keep : 更新端口信息
+
+
+...
+
+group 保活模块发送缓存报文
+lacp->lacp : 系统忙
+activate lacp
+lacp -[#red]->x keep : 
+note left #red
+    系统忙导致
+    LACP任务无法得到调度
+end note
+keep -> keep : 检测到超时
+keep -> partner : 发送缓存报文
+end
+
+...1 minutes latter ...
+
+lacp->lacp : 任务恢复
+deactivate lacp
+
+
+lacp -> partner : 发送报文
+lacp ->keep : 通知保活模块
+keep -> keep : 更新端口信息
+
+
+...
+
+@enduml
