@@ -1,0 +1,32 @@
+官方网址：
+https://www.vim.org
+Windows版建议从官网下载，公司访问该网站有点慢，打开还是没有问题的。
+
+Linux默认都会自带vi或者vim，如果不是8.0或以上版本，建议安装8.0以上版本。
+
+普通人的编辑利器——Vim
+
+http://blog.sina.com.cn/s/blog_46dac66f010005kw.html
+这篇文章介绍了Vim的一下基本的文本处理能力。
+
+程序员的编辑器——VIM（vim-manuscript.txt）
+这篇文章介绍了很程序员常用的命令和插件。
+
+昨天的分享主要用到的其他工具及插件：
+ctags
+需要安装ctags工具，及对应的vim脚本
+gtags(GNU Global)
+需要安装GNU Global工具，及gtags.vim脚本
+taglist
+需要安装ctags工具，及taglist.vim脚本
+taghightlight
+需要安装ctags工具，及taghighlight插件
+NERD-tree
+需要安装NERD-tree插件
+cscope（几乎完全可以由gtags替代）
+需要安装cscope工具，及cscope.vim脚本
+以上需要安装的工具，包括vim、ctags、gtags、cscope都是开源的，Linux下如果可以使用yum/apt-get会比较方便，如果不方便访问外网，也可以采用编译安装的方法。
+以上工具官方都有提供windows版本，但是由于公司限制sourceforge的访问，官方链接需要在外面下载好了，再邮件发给自己。
+以上插件也可以通过vim的管理器Vundle来安装，比较方便，但是需要能够访问外网，并且依赖的ctags、gtags、cscope等工具还是要自己安装的，Vundle只安装对应的vim插件。
+
+附件中的内容都是通过官方途径下载，请放心使用。
