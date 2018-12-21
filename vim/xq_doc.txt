@@ -30,3 +30,13 @@ cscope（几乎完全可以由gtags替代）
 以上插件也可以通过vim的管理器Vundle来安装，比较方便，但是需要能够访问外网，并且依赖的ctags、gtags、cscope等工具还是要自己安装的，Vundle只安装对应的vim插件。
 
 附件中的内容都是通过官方途径下载，请放心使用。
+
+gongxl@xxx:~> cd .vim/
+gongxl@xxx:~/.vim> ll
+总用量 24
+drwxr-xr-x 3 gongxl users 4096 12月 19 10:11 autoload
+drwxr-xr-x 2 gongxl users 4096 12月 19 10:11 doc
+drwxr-xr-x 3 gongxl users 4096 12月 19 10:11 lib
+drwxr-xr-x 2 gongxl users 4096 12月 19 10:11 nerdtree_plugin
+drwxr-xr-x 2 gongxl users 4096 12月 19 10:11 plugin
+drwxr-xr-x 2 gongxl users 4096 12月 19 10:11 syntax
