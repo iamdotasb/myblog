@@ -1,0 +1,101 @@
+@startuml
+
+
+
+:软转发上行处理入口;
+if (入参srv_ifId是否为有效值) then
+    -[#red,dashed]-> 上行不会进入此分支;
+    if (srv_ifId状态为disable) then (yes)
+        :ERROR;
+        stop
+    else (no)
+        partition 获取srvport规则 {
+            if (单板支持sport转换 &&\n 匹配sport条目) then (yes)
+                :替换VLAN;
+            else
+                 partition 获取qinq条目{
+                    if (匹配qinq条目) then (yes)
+                        if (单板支持qinq转换) then (yes)
+                            :替换VLAN;
+                            else (no)
+                        endif
+                        else
+                        :ERROR;
+                        stop
+                    endif
+                }
+            endif
+            :OK;
+            stop
+        }
+        
+    endif
+endif
+
+if (vport下是否存在sport) then (yes)
+    if (上行不需要srvport转换) then (yes)
+        if (根据转换后VLAN获取SPORT) then (yes)
+            :OK;
+            stop
+        else (no)
+        endif
+    else (no)
+        if (根据vport和vlan获取sport) then (OK)
+            :对srv_ifId参数赋值;
+            if (srv_ifId状态为disable) then (yes)
+                :ERROR;
+                stop
+            else (no)      
+                partition 获取srvport规则 {
+                    if (单板支持sport转换 &&\n 匹配sport条目) then (yes)
+                        :替换VLAN;
+                    else
+                        partition 获取qinq条目 {
+                            if (匹配qinq条目) then (yes)
+                                if (单板支持qinq转换) then (yes)
+                                    :替换VLAN;
+                                else (no)
+                                    :ETGOB ETGOD\nETGOF ETGHG\n由交换芯片完成qinq转换;
+                                endif
+                            else
+                                :ERROR;
+                                stop
+                            endif
+                        }
+                    endif
+                    :OK;
+                    stop
+                }
+                
+            endif
+
+        else (ERROR)
+        endif
+    endif
+
+    if (支持qinq混配) then (yes)
+    else (no)
+        :ERROR;
+        stop
+    endif
+endif
+
+skinparam Partition {
+    BorderColor Red
+}
+partition 获取qinq条目 {
+    if (匹配qinq条目) then (yes)
+        if (单板支持qinq转换) then (yes)
+            :替换VLAN;
+        else (no)
+            :ETGOB ETGOD\nETGOF ETGHG\n由交换芯片完成qinq转换;
+        endif
+        :OK;
+        stop
+    else
+        :ERROR;
+        stop
+    endif
+}
+
+@enduml
