@@ -1,0 +1,87 @@
+@startuml
+state SD卡控制状态机{
+    [*] --> SD_IDLE
+    SD_IDLE : sd初始化完成之后的正常工作状态
+    SD_IDLE : do/送bmp0数据存放的第1扇区地址
+    SD_IDLE : do/arg <= P0_ADDR;//32'h0004_6600
+    SD_IDLE --> SD_RD_PT    
+    SD_RD_PT : sd读取Partition Table
+    SD_RD_PT : do/cmd <= 6'd17;	//发送命令CMD17	
+    SD_RD_PT --> SD_RD_BPB:cmd_nstate == CMD_CLKE \n spi_tx_rdy == 1 \n spi_tx_enr == 1 
+    SD_RD_BPB : sd读取启动区状态
+    SD_RD_BPB : do/cmd <= 6'd17;	//发送命令CMD17	
+    SD_RD_BPB : do/arg <= arg+32'h00000001
+    SD_RD_BPB --> SD_DELAY:cmd_nstate == CMD_CLKE \n spi_tx_rdy == 1 \n spi_tx_enr == 1 \n arg == arg_r+P_MEM-32'h00000001
+    SD_DELAY : sd操作完毕延时等待状态
+    SD_DELAY --> SD_RD_PT:done_5s \n //显示下一幅图片
+}
+
+state SD卡命令状态机{
+    SD_RD_PT -right-> SD卡命令状态机
+    [*] --> CMD_IDLE
+    CMD_IDLE -right-> CMD_CSH:cmd_rdboot_en==1\n(sdinit_cstate == SD_RD_PT)
+    CMD_CSH : T0时刻CS拉高，并送8个周期clk    
+    CMD_CSH : 开始发送:
+    CMD_CSH : entry/spi_tx_rdy==0//SPI数据发送完成标志位，高有效
+    CMD_CSH : do/spi_cs_nr <= 1'b1;	//SD卡片选CS拉高
+    CMD_CSH : do/spi_tx_enr <= 1'b1;//SPI发送使能有效位开启	
+    CMD_CSH : 结束发送:
+    CMD_CSH : entry/spi_tx_rdy==1
+    CMD_CSH : do/spi_cs_nr <= 1'b0;  //SD卡片选CS有效
+    CMD_CSH : do/spi_tx_enr <= 1'b0;	//SPI发送使能有效位暂时关闭
+    CMD_CSH -right-> CMD_CLKS:spi_tx_rdy==1\n spi_tx_enr==0\n spi_rx_enr==0
+    CMD_CLKS : 产生8个CLK状态
+    CMD_CLKS : entry/开始发送:spi_tx_rdy==0
+    CMD_CLKS : do/spi_cs_nr <= 1'b0;
+    CMD_CLKS : do/spi_tx_enr <= 1'b1;	//SPI发送使能有效位开启
+    CMD_CLKS : exit/结束发送:spi_tx_rdy==1
+    CMD_CLKS : do/spi_cs_nr <= 1'b0;	//SD卡片选CS有效
+    CMD_CLKS : do/spi_tx_enr <= 1'b0;	//SPI发送使能有效位暂时关闭
+    CMD_CLKS : do/spi_tx_dbr <= {2'b01,cmd};//起始字节命令送人数据发送寄存器
+    CMD_CLKS -down-> CMD_STAR:spi_tx_rdy==1\n spi_tx_enr==0\n spi_rx_enr==0
+    CMD_STAR : 发送起始字节状态
+    CMD_STAR : entry/开始发送：spi_tx_rdy==0
+    CMD_STAR : do/spi_cs_nr <= 1'b0;	//SD卡片选CS有效
+    CMD_STAR : do/spi_tx_enr <= 1'b1;	//SPI发送使能有效位开启	
+    CMD_STAR : exit/结束发送:spi_tx_rdy==1
+    CMD_STAR : do/spi_cs_nr <= 1'b0;	//SD卡片选CS有效
+    CMD_STAR : do/spi_tx_enr <= 1'b0;	//SPI发送使能有效位暂时关闭
+    CMD_STAR : do/spi_tx_dbr <= arg[31:24];//arg[31:24]命令送人数据发送寄存器   
+    CMD_STAR -left-> CMD_ARG1:spi_tx_rdy==1\n spi_tx_enr==0\n spi_rx_enr==0
+    CMD_ARG1 -left-> CMD_ARG2:spi_tx_rdy==1\n spi_tx_enr==0\n spi_rx_enr==0
+    CMD_ARG2 -left-> CMD_ARG3:spi_tx_rdy==1\n spi_tx_enr==0\n spi_rx_enr==0
+    CMD_ARG3 -down-> CMD_ARG4:spi_tx_rdy==1\n spi_tx_enr==0\n spi_rx_enr==0
+    CMD_ARG4 : //发送CRC校验码\n//8'h95;\n//仅仅对RESET有效的CRC效验码\nif(spi_tx_enr) spi_tx_dbr <= crc;
+    CMD_ARG4 -right-> CMD_END:spi_tx_rdy==1\n spi_tx_enr==0\n spi_rx_enr==0
+    CMD_END : exit/结束发送:当前CMD发送次数计数器增1
+    CMD_END : do/spi_tx_dbr <= 8'hff;
+    CMD_END : do/retry_cmd <= retry_cmd+1'b1;	
+    CMD_END -right-> CMD_RES:spi_tx_rdy==1\n spi_tx_enr==0\n spi_rx_enr==0
+    CMD_RES : entry/开启接收：spi_rx_rdy==0
+    CMD_RES : do/spi_rx_enr <= 1'b1;	//SPI接收使能开启	   
+    CMD_RES : exit/接收数据:spi_rx_rdy==1
+    CMD_RES : do/spi_rx_dbr <= spi_rx_db;//接收SPI响应字节数据
+    CMD_RES --> CMD_RES:spi_rx_dbr != 8'hfe
+    CMD_RES -down-> CMD_RD://接收到RD命令的起始字节8'hfe\n立即读取后面的512B\n spi_rx_dbr == 8'hfe\n sdinit_cstate == SD_RD_PT,SD_RD_BPB\nspi_tx_rdy==1\n spi_tx_enr==0\n spi_rx_enr==0\n 
+    CMD_RD : 直到读取512字节+2字节CRC完成
+    CMD_RD : entry/开启接收：sd_rd_en==0
+    CMD_RD : do/spi_rx_enr <= 1'b1;	//SPI接收使能开启
+    CMD_RD : do/spi_tx_dbr <= 8'hff;//发送寄存器置ff
+    CMD_RD : exit/完成接收：sd_rd_en==1
+    CMD_RD : do/spi_rx_enr <= 1'b0;		//SPI接收使能暂时关闭
+    CMD_RD : do/spi_rx_dbr <= spi_rx_db;	//接收SPI响应字节数据
+    CMD_RD : do/cnt512 <= cnt512+1'b1;	读取512B计数器自增
+    CMD_RD -left-> CMD_DELAY://直到读取512字节+2字节CRC完成\n cnt512 == 10'd514
+    CMD_DELAY -left-> CMD_CLKE
+    CMD_CLKE :产生8个CLK状态
+    CMD_CLKE : entry/开启发送：spi_tx_rdy==0
+    CMD_CLKE : do/spi_tx_enr <= 1'b1;	//SPI发送使能有效位开启
+    CMD_CLKE : do/wait_cnt8 <= 4'd0;
+    CMD_CLKE : exit/ 开启接收：spi_tx_rdy==1
+    CMD_CLKE : do/spi_tx_enr <= 1'b0;	//SPI发送使能有效位暂时关闭
+    CMD_CLKE : do/spi_tx_dbr <= 8'hff;
+    CMD_CLKE : do/retry_cmd <= 8'd0;	//当前CMD发送次数计数器清零
+    CMD_CLKE --> [*]:spi_tx_rdy==1\n spi_tx_enr==0\n spi_rx_enr==0
+}
+
+@enduml
