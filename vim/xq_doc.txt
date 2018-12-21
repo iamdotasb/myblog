@@ -31,8 +31,8 @@ cscope（几乎完全可以由gtags替代）
 
 附件中的内容都是通过官方途径下载，请放心使用。
 
-gongxl@xxx:~> cd .vim/
-gongxl@xxx:~/.vim> ll
+ciaran@xxx:~> cd .vim/
+ciaran@xxx:~/.vim> ll
 总用量 24
 drwxr-xr-x 3 gongxl users 4096 12月 19 10:11 autoload
 drwxr-xr-x 2 gongxl users 4096 12月 19 10:11 doc
